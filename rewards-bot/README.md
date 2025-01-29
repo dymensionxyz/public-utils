@@ -27,7 +27,8 @@ The script accepts JSON files in the following formats:
 [
     {
         "dym_address": "dym1...",
-        "rewards": 1000000000000000000
+        // amount of rewards to send in dym
+        "rewards": 10
     }
 ]
 ```

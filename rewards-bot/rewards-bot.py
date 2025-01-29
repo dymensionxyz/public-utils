@@ -57,12 +57,30 @@ def send_tokens(binary_path, key_name, address, amount, keyring, chain_id, rpc):
         ]
         print(f"Executing: {' '.join(command)}")
 
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode == 0:
-            txhash = extract_txhash(result.stdout)
+        if keyring == "os":
+            # For OS keyring, use subprocess.Popen to handle interactive password prompt
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                text=True
+            )
+            password = input("Enter keyring password: ")
+            stdout, stderr = process.communicate(input=password + "\n")
+            result_code = process.returncode
+            output = stdout
+        else:
+            # For other keyring types
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result_code = result.returncode
+            output = result.stdout
+
+        if result_code == 0:
+            txhash = extract_txhash(output)
             return txhash
         else:
-            print(f"Error: {result.stderr}")
+            print(f"Error: {stderr if keyring == 'os' else result.stderr}")
             return None
     except Exception as e:
         print(f"Exception occurred: {e}")
