@@ -52,7 +52,9 @@ def send_tokens(binary_path, key_name, address, amount, keyring, chain_id, rpc):
             "--keyring-backend", keyring,
             "--chain-id", chain_id,
             "--node", rpc,
-            "--fees", "0.001dym",
+            "--gas-adjustment", "1.4",
+            "--gas", "auto",
+            "--gas-prices","20000000000adym",
             "--yes" 
         ]
         print(f"Executing: {' '.join(command)}")
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     rewards_data = read_rewards_data(rewards_file)
     for entry in rewards_data:
             address = entry["dym_address"]
-            amount = f"{entry['rewards']}dym"
+            amount = f"{entry['rewards']}adym"
                 
             if address in processed_addresses:
                 print(f"Skipping already processed address: {address}")
