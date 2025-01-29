@@ -44,8 +44,8 @@ python rewards-bot.py
 2. You will be prompted to enter:
    - Binary path (path to your `dymd` executable)
    - Key name (your wallet name)
-   - Keyring (usually "test" or "file")
-   - Chain ID (e.g., "froopyland_100-1")
+   - Keyring (usually "test" or "os")
+   - Chain ID (e.g., "dymension_1100-1")
    - RPC URL (e.g., "http://localhost:26657")
    - Path to the rewards data file
 
