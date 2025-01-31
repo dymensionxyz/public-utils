@@ -27,8 +27,8 @@ The script accepts JSON files in the following formats:
 [
     {
         "dym_address": "dym1...",
-        // amount of rewards to send in dym
-        "rewards": 10
+        // amount of rewards to send in adym
+        "rewards": 1000000000000000000
     }
 ]
 ```
@@ -48,12 +48,23 @@ python rewards-bot.py
    - Chain ID (e.g., "froopyland_100-1")
    - RPC URL (e.g., "http://localhost:26657")
    - Path to the rewards data file
+   - Path to the results file (for tracking processed transactions)
 
 ## Output
 
-The script creates a `processed_transactions.json` file that tracks:
+The script creates a results file that tracks:
 - Processed addresses
 - Transaction hashes for successful transfers
+
+The results file format:
+```json
+[
+    {
+        "address": "dym1...",
+        "tx_hash": "ABCD..."
+    }
+]
+```
 
 ## Error Handling
 
@@ -70,6 +81,14 @@ The script includes comprehensive error handling for:
 - Double-check the RPC endpoint
 - Test with small amounts first
 
+## Transaction Details
+
+- Gas adjustment: 1.4
+- Gas prices: 20000000000adym
+- Gas estimation: automatic
+- 8-second delay between transactions
+- Amounts are converted from DYM to adym (×10¹⁸)
+
 ## Example Command Flow
 
 ```bash
@@ -80,11 +99,11 @@ Enter the keyring: test
 Enter the chain ID: froopyland_100-1
 Enter the RPC URL: http://localhost:26657
 Enter the files to send rewards from: rewards.json
+Enter the results file: processed_transactions.json
 ```
 
 ## Notes
 
-- The script uses a default fee of 0.001 DYM per transaction
-- Transactions are executed sequentially
 - Failed transactions will not be marked as processed
 - The script can be safely interrupted and restarted, as it tracks processed addresses
+- Progress is displayed as "X/Y transactions processed"

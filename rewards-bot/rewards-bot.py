@@ -1,5 +1,6 @@
 import json
 import subprocess
+import time
 
 def read_json(file_path):
     try:
@@ -52,35 +53,19 @@ def send_tokens(binary_path, key_name, address, amount, keyring, chain_id, rpc):
             "--keyring-backend", keyring,
             "--chain-id", chain_id,
             "--node", rpc,
-            "--fees", "0.001dym",
+             "--gas-adjustment", "1.4",
+            "--gas", "auto",
+            "--gas-prices","20000000000adym",
             "--yes" 
         ]
         print(f"Executing: {' '.join(command)}")
 
-        if keyring == "os":
-            # For OS keyring, use subprocess.Popen to handle interactive password prompt
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-                text=True
-            )
-            password = input("Enter keyring password: ")
-            stdout, stderr = process.communicate(input=password + "\n")
-            result_code = process.returncode
-            output = stdout
-        else:
-            # For other keyring types
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            result_code = result.returncode
-            output = result.stdout
-
-        if result_code == 0:
-            txhash = extract_txhash(output)
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0:
+            txhash = extract_txhash(result.stdout)
             return txhash
         else:
-            print(f"Error: {stderr if keyring == 'os' else result.stderr}")
+            print(f"Error: {result.stderr}")
             return None
     except Exception as e:
         print(f"Exception occurred: {e}")
@@ -92,9 +77,9 @@ def read_processed_addresses(file_path):
         with open(file_path, "r", encoding="utf-8") as file:
             data = json.load(file)
             print(f"Read processed addresses: {data}")
-            # Handle list of strings (addresses)
-            if isinstance(data, list) and all(isinstance(x, str) for x in data):
-                return set(data)
+            # Handle list of dictionaries with address and tx_hash
+            if isinstance(data, list) and all(isinstance(x, dict) for x in data):
+                return set(entry["address"] for entry in data)
             else:
                 print(f"Warning: Unexpected format in processed addresses file {file_path}")
                 return set()
@@ -132,9 +117,6 @@ def read_rewards_data(file_path):
         return []
 
 if __name__ == "__main__":
-    # Add tracking file for successful transactions
-    processed_file = "processed_transactions.json"
-    processed_addresses = read_processed_addresses(processed_file)
 
     binary_path = input("Enter the binary path: ").strip()
     key_name = input("Enter the key name: ").strip()
@@ -142,14 +124,31 @@ if __name__ == "__main__":
     chain_id = input("Enter the chain ID: ").strip()
     rpc = input("Enter the RPC URL: ").strip()
     rewards_file = input("Enter the files to send rewards from: ").strip()
+    results_file = input("Enter the results file: ").strip()
+
+    processed_addresses = read_processed_addresses(results_file)
 
     rewards_data = read_rewards_data(rewards_file)
+    total_tx = len(rewards_data)
+    processed_count = 0
+    processed_data_list = []
+    try:
+        # Try to read existing processed data
+        with open(processed_file, "r", encoding="utf-8") as file:
+            processed_data_list = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        processed_data_list = []
+
+    print(f"Starting to process {total_tx} transactions...")
+
     for entry in rewards_data:
             address = entry["dym_address"]
-            amount = f"{entry['rewards']}dym"
+            amount = f"{int(entry['rewards'] * 10**18)}adym"
                 
             if address in processed_addresses:
                 print(f"Skipping already processed address: {address}")
+                processed_count += 1
+                print(f"Progress: {processed_count}/{total_tx} transactions processed")
                 continue
                 
             result = send_tokens(binary_path, key_name, address, amount, keyring, chain_id, rpc)
@@ -160,4 +159,11 @@ if __name__ == "__main__":
                     "address": address,
                     "tx_hash": result
                 }
-                write_json(processed_file, [processed_data])
+                processed_data_list.append(processed_data)
+                write_json(processed_file, processed_data_list)
+                processed_count += 1
+                print(f"Progress: {processed_count}/{total_tx} transactions processed")
+                print("Sleeping for 8 seconds...")
+                time.sleep(8)
+
+    print(f"\nCompleted! {processed_count}/{total_tx} transactions processed successfully.")
